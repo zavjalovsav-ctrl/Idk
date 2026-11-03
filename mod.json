@@ -1,0 +1,28 @@
+{
+	"geode": "4.0.0",
+	"gd": {
+		"win": "2.2074",
+		"android": "2.2074",
+		"mac": "2.2074",
+		"ios": "2.2074"
+	},
+	"id": "zavjalovsav.lite-cheats",
+	"name": "Lite Cheats",
+	"version": "v1.0.0",
+	"developer": "zavjalovsav",
+	"description": "Лёгкий чит-мод: Noclip и Layout.",
+	"settings": {
+		"noclip": {
+			"type": "bool",
+			"name": "Noclip",
+			"description": "Не умирать от препятствий.",
+			"default": false
+		},
+		"layout": {
+			"type": "bool",
+			"name": "Layout",
+			"description": "Скрывать декорации (применяется при входе в уровень).",
+			"default": false
+		}
+	}
+}
