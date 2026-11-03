@@ -18,7 +18,6 @@ jobs:
         uses: geode-sdk/build-geode-mod@main
         with:
           combine: true
-          sdk: latest
           target: Android64
 
   package:
