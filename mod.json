@@ -1,27 +1,78 @@
 {
 	"geode": "5.9.0",
 	"gd": {
-		"win": "2.2074",
-		"android": "2.2081",
-		"mac": "2.2074",
-		"ios": "2.2074"
+		"android": "2.2081"
 	},
 	"id": "zavjalovsav.lite-cheats",
 	"name": "Lite Cheats",
-	"version": "v1.0.0",
+	"version": "v1.1.0",
 	"developer": "zavjalovsav",
-	"description": "Лёгкий чит-мод: Noclip и Layout.",
+	"description": "Лёгкий чит-мод.",
 	"settings": {
+		"title-level": {
+			"type": "title",
+			"name": "Level"
+		},
 		"noclip": {
 			"type": "bool",
 			"name": "Noclip",
 			"description": "Не умирать от препятствий.",
 			"default": false
 		},
+		"title-speed": {
+			"type": "title",
+			"name": "Speed"
+		},
+		"speed-on": {
+			"type": "bool",
+			"name": "Speedhack",
+			"description": "Включить изменение скорости игры.",
+			"default": false
+		},
+		"speed": {
+			"type": "float",
+			"name": "Speed value",
+			"description": "Скорость игры (1.0 = обычная).",
+			"default": 1.0,
+			"min": 0.1,
+			"max": 3.0,
+			"control": {
+				"slider": true,
+				"input": true
+			}
+		},
+		"title-appearance": {
+			"type": "title",
+			"name": "Appearance"
+		},
 		"layout": {
 			"type": "bool",
 			"name": "Layout",
-			"description": "Скрывать декорации (применяется при входе в уровень).",
+			"description": "Скрыть декорации.",
+			"default": false
+		},
+		"mirror": {
+			"type": "bool",
+			"name": "Mirror",
+			"description": "Зеркальное отражение экрана.",
+			"default": false
+		},
+		"flip": {
+			"type": "bool",
+			"name": "Flip",
+			"description": "Экран вверх ногами.",
+			"default": false
+		},
+		"hide-player": {
+			"type": "bool",
+			"name": "Hide player",
+			"description": "Скрыть иконку игрока.",
+			"default": false
+		},
+		"chaos": {
+			"type": "bool",
+			"name": "NANI?!",
+			"description": "Всё становится разноцветным и трясётся.",
 			"default": false
 		}
 	}
