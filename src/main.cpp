@@ -5,14 +5,8 @@
 
 using namespace geode::prelude;
 
-static void applyLayout(bool on) {
-    auto pl = PlayLayer::get();
-    if (!pl) return;
-    for (auto obj : CCArrayExt<GameObject*>(pl->m_objects)) {
-        if (obj->m_objectType == GameObjectType::Decoration) {
-            obj->setVisible(!on);
-        }
-    }
+static bool opt(char const* key) {
+    return Mod::get()->getSettingValue<bool>(key);
 }
 
 static ccColor3B hueToRGB(float h) {
@@ -32,47 +26,62 @@ static ccColor3B hueToRGB(float h) {
 
 class $modify(LitePlayLayer, PlayLayer) {
     struct Fields {
-        bool chaos = false;
         float t = 0.f;
         CCLayerColor* overlay = nullptr;
+        bool chaosOn = false;
+        bool layoutOn = false;
+        bool hidOn = false;
     };
 
-    // Noclip: не умираем от препятствий (античит-шип оставляем как есть)
+    // Noclip
     void destroyPlayer(PlayerObject* player, GameObject* obj) override {
-        if (Mod::get()->getSettingValue<bool>("noclip") && obj != m_anticheatSpike) {
+        if (opt("noclip") && obj != m_anticheatSpike) {
             return;
         }
         PlayLayer::destroyPlayer(player, obj);
     }
 
-    // Layout: при входе в уровень применяем сохранённое состояние
-    void setupHasCompleted() {
-        PlayLayer::setupHasCompleted();
-        if (Mod::get()->getSettingValue<bool>("layout")) {
-            applyLayout(true);
-        }
-    }
-
-    // Хаос: цвета и тряска
     void postUpdate(float dt) {
         PlayLayer::postUpdate(dt);
 
         auto f = m_fields.self();
-        if (!f->chaos) return;
+        auto mod = Mod::get();
+        auto win = CCDirector::get()->getWinSize();
 
-        f->t += dt;
-        if (f->overlay) {
-            f->overlay->setColor(hueToRGB(std::fmod(f->t * 180.f, 360.f)));
+        // Speedhack
+        float sp = opt("speed-on") ? static_cast<float>(mod->getSettingValue<double>("speed")) : 1.f;
+        CCDirector::get()->getScheduler()->setTimeScale(sp);
+
+        // Mirror / Flip
+        bool mx = opt("mirror");
+        bool fy = opt("flip");
+        this->setScaleX(mx ? -1.f : 1.f);
+        this->setPositionX(mx ? win.width : 0.f);
+        this->setScaleY(fy ? -1.f : 1.f);
+        this->setPositionY(fy ? win.height : 0.f);
+
+        // Hide player
+        if (opt("hide-player")) {
+            m_player1->setVisible(false);
+            f->hidOn = true;
+        } else if (f->hidOn) {
+            m_player1->setVisible(true);
+            f->hidOn = false;
         }
-        m_objectLayer->setRotation(std::sin(f->t * 2.5f) * 10.f);
-        m_objectLayer->setSkewX(std::sin(f->t * 4.f) * 10.f);
-    }
 
-    void setChaos(bool on) {
-        auto f = m_fields.self();
-        f->chaos = on;
+        // Layout (применяется при изменении)
+        bool layout = opt("layout");
+        if (layout != f->layoutOn) {
+            f->layoutOn = layout;
+            for (auto obj : CCArrayExt<GameObject*>(m_objects)) {
+                if (obj->m_objectType == GameObjectType::Decoration) {
+                    obj->setVisible(!layout);
+                }
+            }
+        }
 
-        if (on) {
+        // NANI?! хаос
+        if (opt("chaos")) {
             if (!f->overlay) {
                 f->overlay = CCLayerColor::create(ccc4(255, 0, 0, 110));
                 ccBlendFunc blend = {GL_SRC_ALPHA, GL_ONE};
@@ -80,11 +89,22 @@ class $modify(LitePlayLayer, PlayLayer) {
                 this->addChild(f->overlay, 1000);
             }
             f->overlay->setVisible(true);
-        } else {
+            f->t += dt;
+            f->overlay->setColor(hueToRGB(std::fmod(f->t * 180.f, 360.f)));
+            m_objectLayer->setRotation(std::sin(f->t * 2.5f) * 10.f);
+            m_objectLayer->setSkewX(std::sin(f->t * 4.f) * 10.f);
+            f->chaosOn = true;
+        } else if (f->chaosOn) {
             if (f->overlay) f->overlay->setVisible(false);
             m_objectLayer->setRotation(0.f);
             m_objectLayer->setSkewX(0.f);
+            f->chaosOn = false;
         }
+    }
+
+    void onQuit() {
+        CCDirector::get()->getScheduler()->setTimeScale(1.f);
+        PlayLayer::onQuit();
     }
 };
 
@@ -109,34 +129,30 @@ class $modify(LitePauseLayer, PauseLayer) {
             this->addChild(label, 100);
         };
 
-        bool chaos = false;
-        if (auto pl = static_cast<LitePlayLayer*>(PlayLayer::get())) {
-            chaos = pl->m_fields->chaos;
-        }
+        addRow("Noclip", opt("noclip"), menu_selector(LitePauseLayer::onNoclip), 70.f);
+        addRow("Layout", opt("layout"), menu_selector(LitePauseLayer::onLayout), 40.f);
+        addRow("NANI?!", opt("chaos"), menu_selector(LitePauseLayer::onChaos), 100.f);
 
-        addRow("Noclip", Mod::get()->getSettingValue<bool>("noclip"),
-               menu_selector(LitePauseLayer::onNoclip), 70.f);
-        addRow("Layout", Mod::get()->getSettingValue<bool>("layout"),
-               menu_selector(LitePauseLayer::onLayout), 40.f);
-        addRow("NANI?!", chaos,
-               menu_selector(LitePauseLayer::onChaos), 100.f);
+        auto spr = ButtonSprite::create("Cheats");
+        spr->setScale(0.6f);
+        auto btn = CCMenuItemSpriteExtra::create(spr, nullptr, this, menu_selector(LitePauseLayer::onCheats));
+        btn->setPosition(ccp(70.f, 140.f));
+        menu->addChild(btn);
     }
 
     void onNoclip(CCObject*) {
-        auto mod = Mod::get();
-        mod->setSettingValue<bool>("noclip", !mod->getSettingValue<bool>("noclip"));
+        Mod::get()->setSettingValue<bool>("noclip", !opt("noclip"));
     }
 
     void onLayout(CCObject*) {
-        auto mod = Mod::get();
-        bool now = !mod->getSettingValue<bool>("layout");
-        mod->setSettingValue<bool>("layout", now);
-        applyLayout(now);
+        Mod::get()->setSettingValue<bool>("layout", !opt("layout"));
     }
 
     void onChaos(CCObject*) {
-        if (auto pl = static_cast<LitePlayLayer*>(PlayLayer::get())) {
-            pl->setChaos(!pl->m_fields->chaos);
-        }
+        Mod::get()->setSettingValue<bool>("chaos", !opt("chaos"));
+    }
+
+    void onCheats(CCObject*) {
+        geode::openSettingsPopup(Mod::get());
     }
 };
